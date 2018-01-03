@@ -135,7 +135,7 @@ class Server extends EventEmitter {
           if (res && res.ok) {
             const services = res.body.services;
             const serviceList = services
-              .map(service => new Service(this, service.name));
+              .map(service => new Service(this, service.name, service.tasks));
             resolve(serviceList);
           } else {
             const status = ((err && err.status) ? ': ' + err.status : '');

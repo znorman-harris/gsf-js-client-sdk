@@ -14,8 +14,9 @@ class Service {
   /**
    * @param {GSF} server - The GSF server object.
    * @param {string} serviceName - The name of the service.
+   * @param {string[]} serviceTaskList - Optional, the names of the tasks for the service.
    */
-  constructor(server, serviceName) {
+  constructor(server, serviceName, serviceTaskList) {
     /**
      * The service name.
      * @type {string}
@@ -24,6 +25,10 @@ class Service {
 
     // Server object.
     this._server = server;
+
+    // Save tasks if present
+    this.taskNames = null;
+    if (serviceTaskList) {this.taskNames = serviceTaskList;}
   }
 
   /**
@@ -120,23 +125,33 @@ class Service {
 
   /**
    * Retrieves the array of task objects available on the service.
+   * @param {boolean} noCache - If true, task list will not be cached in the object.
    * @return {Promise<Task[], error>} Returns a Promise to an array of Task objects.
    */
-  tasks() {
+  tasks(noCache) {
     return new Promise((resolve, reject) => {
-      this.info()
-        .then((info) => {
-          const tasks = info.tasks.map((taskName) => {
-            return new Task(this, taskName);
-          });
-          resolve(tasks);
-        })
-        .catch((err) => {
-          const status = ((err && err.status) ? ': ' + err.status : '');
-          const text = ((err && err.response && err.response.text) ? ': ' +
-           err.response.text : '');
-          reject('Error requesting tasks' + status + text);
+      // Check if we already have our task names
+      if ((this.taskNames !== null) && (!noCache)) {
+        const tasks = this.taskNames.map((taskName) => {
+          return new Task(this, taskName);
         });
+        resolve(tasks);
+      } else {
+        this.info()
+          .then((info) => {
+            const tasks = info.tasks.map((taskName) => {
+              return new Task(this, taskName);
+            });
+            if (!noCache) {this.taskNames = info.tasks;}
+            resolve(tasks);
+          })
+          .catch((err) => {
+            const status = ((err && err.status) ? ': ' + err.status : '');
+            const text = ((err && err.response && err.response.text) ? ': ' +
+             err.response.text : '');
+            reject('Error requesting tasks' + status + text);
+          });
+      }
     });
   }
 }
